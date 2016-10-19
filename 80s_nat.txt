@@ -1,0 +1,58 @@
+80S配置为路由模式
+    [Arguments]  ${ap_ip}
+    connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
+    send_command_ap  ap  set_route_mode.sh  #  true  30
+    close_connect_ap  ap
+    connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
+    ${msg}  send_command_ap  ap  uci show forward
+    check_regexp_result  route  ${msg}
+    close_connect_ap  ap
+
+80S配置为桥模式
+    [Arguments]  ${ap_ip}
+    connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
+    send_command_ap  ap  set_bridge_mode.sh  #  true  30
+    close_connect_ap  ap
+    connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
+    ${msg}  send_command_ap  ap  uci show forward
+    check_regexp_result  bridge  ${msg}
+    close_connect_ap  ap
+
+80S路由模式的用户地址池配置
+    [Arguments]  ${ap_ip}
+    disable_dhcp_server    ac
+    conf_vlan_ip    ac    --vlan ${sta_dhcp_vlan} --ip ${sta_dhcp_gw} --mask ${mask} --operstat_up --no_shutdown
+    conf_dhcp_pool    ac    --name ${sta_dhcp_pool_name} --default-router ${sta_dhcp_gw} --lease 0 1 0 0 --network ${sta_dhcp_net} ${mask}
+    conf_dhcp_pool    ac    --name ${sta_dhcp_pool_name}
+    conf_dhcp_pool_attribute    ac    --ap-special-pool enable
+    conf_dhcp_pool_attribute    ac    --ap-dhcp-range-number 64
+    conf_vap_profile               ac    --name ${vap} --forward-mode local-bridge --local-dhcp-enable --local-associate-enable --vlan ${sta_dhcp_vlan} --ap-dhcp-pool ${sta_dhcp_pool_name}
+    commit_ap_template          ac    --name ${test}
+    wait until keyword succeeds  20x  2s  80S等待特殊地址池下发  ${ap_ip}
+    ${gw}  获取特殊地址池的网关  ${ap_ip}
+    [Return]  ${gw}
+
+80S等待特殊地址池下发
+    [Arguments]  ${ap_ip}  ${flag}=true
+    connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
+    ${msg}  send_command_ap  ap  uci show dhcp
+    check_regexp_result  ${sta_dhcp_pool_name}  ${msg}  ${flag}
+    close_connect_ap  ap
+
+获取特殊地址池的网关
+    [Arguments]  ${ap_ip}
+    connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
+    ${msg}  send_command_ap  ap  uci show dhcp | grep ${sta_dhcp_pool_name}.dhcp_option | awk -F= '{print $2}' | awk -F" " '{print $1}' | awk -F, '{print $2}'
+    close_connect_ap  ap
+    ${gw}  find_pattern_from_string  ${msg}  (${sta_dhcp_ip_24}\\.\\d+)  0
+    run keyword if  '${gw}'=='${empty}'  fail  没有获取到网关
+    [Return]  ${gw}
+
+80S特殊地址池删除
+    [Arguments]  ${ap_ip}
+    no_dhcp_pool_name  ac  --name ${sta_dhcp_pool_name}
+    conf_vap_profile    ac    --name ${vap}
+    no_vap_profile_attribute    ac    --ap-dhcp-pool
+    commit_ap_template          ac    --name ${test}
+    enable_dhcp_server    ac
+    wait until keyword succeeds  20x  2s  80S等待特殊地址池下发  ${ap_ip}  false
