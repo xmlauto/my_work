@@ -3,6 +3,7 @@
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     send_command_ap  ap  set_route_mode.sh  #  true  30
     close_connect_ap  ap
+    check_Cisco_ping_result  cisco  ${ap_ip}
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     ${msg}  send_command_ap  ap  uci show forward
     check_regexp_result  route  ${msg}
@@ -13,6 +14,7 @@
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     send_command_ap  ap  set_bridge_mode.sh  #  true  30
     close_connect_ap  ap
+    check_Cisco_ping_result  cisco  ${ap_ip}
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     ${msg}  send_command_ap  ap  uci show forward
     check_regexp_result  bridge  ${msg}
