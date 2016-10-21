@@ -3,6 +3,7 @@
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     send_command_ap  ap  set_route_mode.sh  #  true  30
     close_connect_ap  ap
+    cisco_show_dhcp_binding  cisco
     check_Cisco_ping_result  cisco  ${ap_ip}
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     ${msg}  send_command_ap  ap  uci show forward
@@ -14,6 +15,7 @@
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     send_command_ap  ap  set_bridge_mode.sh  #  true  30
     close_connect_ap  ap
+    cisco_show_dhcp_binding  cisco
     check_Cisco_ping_result  cisco  ${ap_ip}
     connect_ap_from_cisco  ap  ${Cisco_host}  ${ap_ip}  admin
     ${msg}  send_command_ap  ap  uci show forward
@@ -29,9 +31,10 @@
     conf_dhcp_pool_attribute    ac    --ap-special-pool enable
     conf_dhcp_pool_attribute    ac    --ap-dhcp-range-number 64
     conf_vap_profile               ac    --name ${vap} --forward-mode local-bridge --local-dhcp-enable --local-associate-enable --vlan ${sta_dhcp_vlan} --ap-dhcp-pool ${sta_dhcp_pool_name}
-    commit_ap_template          ac    --name ${test}
+    commit_ap_template          ac    --name ${template_name}
     wait until keyword succeeds  20x  2s  80S等待特殊地址池下发  ${ap_ip}
     ${gw}  获取特殊地址池的网关  ${ap_ip}
+    set globla variable  ${sta_dhcp_gw}  ${gw}
     [Return]  ${gw}
 
 80S等待特殊地址池下发
@@ -55,6 +58,15 @@
     no_dhcp_pool_name  ac  --name ${sta_dhcp_pool_name}
     conf_vap_profile    ac    --name ${vap}
     no_vap_profile_attribute    ac    --ap-dhcp-pool
-    commit_ap_template          ac    --name ${test}
+    commit_ap_template          ac    --name ${template_name}
     enable_dhcp_server    ac
     wait until keyword succeeds  20x  2s  80S等待特殊地址池下发  ${ap_ip}  false
+    
+获取AP-eth0和AP-VLAN1的mac地址
+    ${msg}  send_command_ap  ap  ifconfig br-wan | grep -i HWaddr
+    ${mac1}    find_pattern_from_noenterstring    ${msg}     \\s+(\\w{2}:\\w{2}:\\w{2}:\\w{2}:\\w{2}:\\w{2})\\s+    0
+    ${ap_eth0_mac}    mac_translate_colon_to_dot    ${mac1}
+    ${mac2}    find_pattern_from_noenterstring    ${msg}     \\s+(\\w{2}:\\w{2}:\\w{2}:\\w{2}:\\w{2}:\\w{2})\\s+    0
+    ${ap_vlan1_mac}    mac_translate_colon_to_dot    ${mac2}
+    Set Global Variable    ${ap_eth0_mac} 
+    Set Global Variable    ${ap_vlan1_mac}
