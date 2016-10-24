@@ -34,7 +34,7 @@
     commit_ap_template          ac    --name ${template_name}
     wait until keyword succeeds  20x  2s  80S等待特殊地址池下发  ${ap_ip}
     ${gw}  获取特殊地址池的网关  ${ap_ip}
-    set globla variable  ${sta_dhcp_gw}  ${gw}
+    set global variable  ${sta_dhcp_gw}  ${gw}
     [Return]  ${gw}
 
 80S等待特殊地址池下发
